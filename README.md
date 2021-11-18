@@ -7,7 +7,7 @@
  ## quickstart
 
  ```console
- $ ./jonny.py sim
- $ ./jonny.py com
+ $ ./jonny.py sim ./tests/test.jonny
+ $ ./jonny.py com ./tests/test.jonny
  $ ./output
  ```
