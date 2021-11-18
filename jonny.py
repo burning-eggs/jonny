@@ -3,16 +3,18 @@ import subprocess
 
 iota_counter = 0
 
+
 def iota(reset=False) -> int:
     global iota_counter
 
     if reset:
         iota_counter = 0
-    
+
     result = iota_counter
     iota_counter += 1
 
     return result
+
 
 OP_PUSH = iota(True)
 OP_PLUS = iota()
@@ -20,17 +22,22 @@ OP_MINUS = iota()
 OP_DUMP = iota()
 COUNT_OPS = iota()
 
+
 def push(x):
     return (OP_PUSH, x)
 
+
 def plus():
-    return (OP_PLUS, )
+    return (OP_PLUS,)
+
 
 def minus():
-    return (OP_MINUS, )
+    return (OP_MINUS,)
+
 
 def dump():
-    return (OP_DUMP, )
+    return (OP_DUMP,)
+
 
 def simulate_program(prog):
     stack = []
@@ -56,6 +63,7 @@ def simulate_program(prog):
             print(a)
         else:
             assert False, f"E: Unreachable op '{op[0]}' in simulation"
+
 
 def compile_program(prog, out_file):
     with open(out_file, "w") as out:
@@ -120,31 +128,35 @@ def compile_program(prog, out_file):
                 out.write("    call dump\n")
             else:
                 assert False, "E: Unreachable op in compilation"
-        
+
         out.write("    mov rax, 60\n")
         out.write("    mov rdi, 0\n")
         out.write("    syscall\n")
 
-# TODO: dont do this
+
+def parse_word_as_op(word):
+    assert COUNT_OPS == 4, "E: Exhaustive handling of ops in parsing"
+
+    if word == "+":
+        return plus()
+    elif word == "-":
+        return minus()
+    elif word == ".":
+        return dump()
+    else:
+        return push(int(word))
 
 
-program = [
-    push(30),
-    push(30),
-    plus(),
-    dump(),
-    push(500),
-    push(500),
-    minus(),
-    dump(),
-]
+def load_program_from_file(file_path):
+    with open(file_path, "r") as f:
+        return [parse_word_as_op(word) for word in f.read().split()]
 
 
-def usage():
-    print("Usage: jonny <SUBCOMMAND> [ARGS]\n")
+def usage(program_name):
+    print("Usage: %s <SUBCOMMAND> [ARGS]\n" % program_name)
     print("SUBCOMMANDS:")
-    print("    sim        Simulate the program")
-    print("    com        Compile the program\n")
+    print("    sim <FILE>        Simulate the program")
+    print("    com <FILE>        Compile the program\n")
 
 
 def call_cmd(cmd):
@@ -152,21 +164,50 @@ def call_cmd(cmd):
     subprocess.call(cmd)
 
 
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        usage()
-        print("E: No subcommand is provided.")
+def uncons(xs):
+    return (xs[0], xs[1:])
+
+
+if __name__ == "__main__":
+    argv = sys.argv
+
+    assert len(argv) >= 1
+
+    (program_name, argv) = uncons(argv)
+
+    if len(argv) < 1:
+        usage(program_name)
+        print("E: SUBCOMMAND not provided.")
         exit(1)
 
-    subcommand = sys.argv[1]
+    (subcommand, argv) = uncons(argv)
 
     if subcommand == "sim":
+        if len(argv) < 1:
+            usage(program_name)
+            print("E: Input file not provided.")
+            exit(1)
+
+        (program_path, argv) = uncons(argv)
+        program = load_program_from_file(program_path)
+
         simulate_program(program)
     elif subcommand == "com":
+        if len(argv) < 1:
+            usage(program_name)
+            print("E: Input file not provided.")
+            exit(1)
+
+        (program_path, argv) = uncons(argv)
+        program = load_program_from_file(program_path)
+
         compile_program(program, "output.asm")
         call_cmd(["nasm", "-felf64", "output.asm"])
         call_cmd(["ld", "-o", "output", "output.o"])
     else:
-        usage()
-        print("E: Unknown subcommand %s." % (subcommand))
+        usage(program_name)
+        print("E: Unknown SUBCOMMAND %s." % (subcommand))
+        call_cmd(["pause"])
         exit(1)
+
+    call_cmd(["pause"])
