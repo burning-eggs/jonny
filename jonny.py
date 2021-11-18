@@ -152,16 +152,17 @@ def load_program_from_file(file_path):
         return [parse_word_as_op(word) for word in f.read().split()]
 
 
+def call_cmd(cmd):
+    print(cmd)
+    subprocess.call(cmd)
+
+
 def usage(program_name):
     print("Usage: %s <SUBCOMMAND> [ARGS]\n" % program_name)
     print("SUBCOMMANDS:")
     print("    sim <FILE>        Simulate the program")
-    print("    com <FILE>        Compile the program\n")
-
-
-def call_cmd(cmd):
-    print(cmd)
-    subprocess.call(cmd)
+    print("    com <FILE>        Compile the program")
+    print("    help              Prints this help message")
 
 
 def uncons(xs):
@@ -177,7 +178,7 @@ if __name__ == "__main__":
 
     if len(argv) < 1:
         usage(program_name)
-        print("E: SUBCOMMAND not provided.")
+        print("\nE: SUBCOMMAND not provided.")
         exit(1)
 
     (subcommand, argv) = uncons(argv)
@@ -185,7 +186,7 @@ if __name__ == "__main__":
     if subcommand == "sim":
         if len(argv) < 1:
             usage(program_name)
-            print("E: Input file not provided.")
+            print("\nE: Input file not provided.")
             exit(1)
 
         (program_path, argv) = uncons(argv)
@@ -195,7 +196,7 @@ if __name__ == "__main__":
     elif subcommand == "com":
         if len(argv) < 1:
             usage(program_name)
-            print("E: Input file not provided.")
+            print("\nE: Input file not provided.")
             exit(1)
 
         (program_path, argv) = uncons(argv)
@@ -204,7 +205,10 @@ if __name__ == "__main__":
         compile_program(program, "output.asm")
         call_cmd(["nasm", "-felf64", "output.asm"])
         call_cmd(["ld", "-o", "output", "output.o"])
+    elif subcommand == "help":
+        usage(program_name)
+        exit(0)
     else:
         usage(program_name)
-        print("E: Unknown SUBCOMMAND %s." % (subcommand))
+        print("\nE: Unknown SUBCOMMAND %s." % (subcommand))
         exit(1)
