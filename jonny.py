@@ -207,7 +207,4 @@ if __name__ == "__main__":
     else:
         usage(program_name)
         print("E: Unknown SUBCOMMAND %s." % (subcommand))
-        call_cmd(["pause"])
         exit(1)
-
-    call_cmd(["pause"])
