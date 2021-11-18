@@ -1,5 +1,6 @@
 import sys
 import subprocess
+import shlex
 
 from os import path
 
@@ -154,8 +155,8 @@ def load_program_from_file(file_path):
         return [parse_word_as_op(word) for word in f.read().split()]
 
 
-def call_cmd(cmd):
-    print(cmd)
+def cmd_echoed(cmd):
+    print("[CMD] %s" % " ".join(map(shlex.quote, cmd)))
     subprocess.call(cmd)
 
 
@@ -206,8 +207,8 @@ if __name__ == "__main__":
             basename = basename[:-len(jonny_ext)]
 
         compile_program(program, basename + ".asm")
-        call_cmd(["nasm", "-felf64", basename + ".asm"])
-        call_cmd(["ld", "-o", basename, basename + ".o"])
+        cmd_echoed(["nasm", "-felf64", basename + ".asm"])
+        cmd_echoed(["ld", "-o", basename, basename + ".o"])
     elif subcommand == "help":
         usage(compiler_name)
         exit(0)
