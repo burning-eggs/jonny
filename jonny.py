@@ -167,23 +167,19 @@ def usage(compiler_name):
     print("    help              Prints this help message")
 
 
-def uncons(xs):
-    return (xs[0], xs[1:])
-
-
 if __name__ == "__main__":
     argv = sys.argv
 
     assert len(argv) >= 1
 
-    (compiler_name, argv) = uncons(argv)
+    compiler_name, *argv = argv
 
     if len(argv) < 1:
         usage(compiler_name)
         print("\nE: SUBCOMMAND not provided.")
         exit(1)
 
-    (subcommand, argv) = uncons(argv)
+    subcommand, *argv = argv
 
     if subcommand == "sim":
         if len(argv) < 1:
@@ -191,7 +187,7 @@ if __name__ == "__main__":
             print("\nE: Input file not provided.")
             exit(1)
 
-        (program_path, argv) = uncons(argv)
+        program_path, *argv = argv
         program = load_program_from_file(program_path)
 
         simulate_program(program)
@@ -201,7 +197,7 @@ if __name__ == "__main__":
             print("\nE: Input file not provided.")
             exit(1)
 
-        (program_path, argv) = uncons(argv)
+        program_path, *argv = argv
         program = load_program_from_file(program_path)
         jonny_ext = ".jonny"
         basename = path.basename(program_path)
