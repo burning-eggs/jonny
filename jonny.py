@@ -206,6 +206,8 @@ if __name__ == "__main__":
         if basename.endswith(jonny_ext):
             basename = basename[:-len(jonny_ext)]
 
+        print("[INFO] Generating %s" % (basename + ".asm"))
+
         compile_program(program, basename + ".asm")
         cmd_echoed(["nasm", "-felf64", basename + ".asm"])
         cmd_echoed(["ld", "-o", basename, basename + ".o"])
