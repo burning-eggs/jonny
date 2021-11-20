@@ -22,6 +22,7 @@ def iota(reset=False) -> int:
 OP_PUSH = iota(True)
 OP_PLUS = iota()
 OP_MINUS = iota()
+OP_EQUAL = iota()
 OP_DUMP = iota()
 COUNT_OPS = iota()
 
@@ -38,6 +39,10 @@ def minus():
     return (OP_MINUS,)
 
 
+def equal():
+    return (OP_EQUAL,)
+
+
 def dump():
     return (OP_DUMP,)
 
@@ -46,7 +51,7 @@ def simulate_program(prog):
     stack = []
 
     for op in prog:
-        assert COUNT_OPS == 4, "E: Exhaustive handling of ops in simulation"
+        assert COUNT_OPS == 5, "E: Exhaustive handling of ops in simulation"
 
         if op[0] == OP_PUSH:
             stack.append(op[1])
@@ -60,6 +65,11 @@ def simulate_program(prog):
             b = stack.pop()
 
             stack.append(b - a)
+        elif op[0] == OP_EQUAL:
+            a = stack.pop()
+            b = stack.pop()
+
+            stack.append(int(a == b))
         elif op[0] == OP_DUMP:
             a = stack.pop()
 
@@ -70,6 +80,7 @@ def simulate_program(prog):
 
 def compile_program(prog, out_file):
     with open(out_file, "w") as out:
+        out.write("BITS 64\n")
         out.write("segment .text\n")
         out.write("dump:\n")
         out.write("    mov     r9, -3689348814741910323\n")
@@ -108,7 +119,7 @@ def compile_program(prog, out_file):
         out.write("_start:\n")
 
         for op in prog:
-            assert COUNT_OPS == 4, "E: Exhaustive handling of ops in compilation"
+            assert COUNT_OPS == 5, "E: Exhaustive handling of ops in compilation"
 
             if op[0] == OP_PUSH:
                 out.write("    ;; -- push %d --\n" % op[1])
@@ -125,6 +136,14 @@ def compile_program(prog, out_file):
                 out.write("    pop rbx\n")
                 out.write("    sub rbx, rax\n")
                 out.write("    push rbx\n")
+            elif op[0] == OP_EQUAL:
+                out.write("    ;; -- equal --\n")
+                out.write("    mov rcx, 0\n")
+                out.write("    mov rdx, 1\n")
+                out.write("    pop rax\n")
+                out.write("    pop rbx\n")
+                out.write("    cmp rax, rbx\n")
+                out.write("    cmove rcx, rdx\n")
             elif op[0] == OP_DUMP:
                 out.write("    ;; -- dump --\n")
                 out.write("    pop rdi\n")
@@ -137,22 +156,56 @@ def compile_program(prog, out_file):
         out.write("    syscall\n")
 
 
-def parse_word_as_op(word):
-    assert COUNT_OPS == 4, "E: Exhaustive handling of ops in parsing"
+def parse_token_as_op(token):
+    (file_path, row, col, word) = token
+
+    assert COUNT_OPS == 5, "E: Exhaustive handling of ops in parsing"
 
     if word == "+":
         return plus()
     elif word == "-":
         return minus()
+    elif word == "=":
+        return equal()
     elif word == ".":
         return dump()
     else:
-        return push(int(word))
+        try:
+            return push(int(word))
+        except ValueError as err:
+            print("%s:%d:%d: %s" % (file_path, row, col, err))
+            exit(1)
+
+
+def find_col(line, start, predicate):
+    while start < len(line) and not predicate(line[start]):
+        start += 1
+
+    return start
+
+
+def lex_line(line):
+    col = find_col(line, 0, lambda x: x.isspace())
+
+    while col < len(line):
+        col_end = find_col(line, col, lambda x: x.isspace())
+
+        yield (col, line[col:col_end])
+
+        col = find_col(line, col_end, lambda x: not x.isspace())
+
+
+def lex_file(file_path):
+    with open(file_path, "r") as f:
+        return [
+            (file_path, row, col, token)
+            for (row, line) in enumerate(f.readlines())
+            for (col, token) in lex_line(line)
+        ]
 
 
 def load_program_from_file(file_path):
-    with open(file_path, "r") as f:
-        return [parse_word_as_op(word) for word in f.read().split()]
+    return [parse_token_as_op(token) for token in lex_file(file_path)]
 
 
 def cmd_echoed(cmd):
@@ -204,7 +257,7 @@ if __name__ == "__main__":
         basename = path.basename(program_path)
 
         if basename.endswith(jonny_ext):
-            basename = basename[:-len(jonny_ext)]
+            basename = basename[: -len(jonny_ext)]
 
         print("[INFO] Generating %s" % (basename + ".asm"))
 
