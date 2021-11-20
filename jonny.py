@@ -28,6 +28,7 @@ OP_DUMP = iota()
 OP_IF = iota()
 OP_END = iota()
 OP_ELSE = iota()
+OP_DUP = iota()
 COUNT_OPS = iota()
 
 
@@ -63,12 +64,16 @@ def else_():
     return (OP_ELSE,)
 
 
+def dup():
+    return (OP_DUP,)
+
+
 def simulate_program(program):
     stack = []
     ip = 0
 
     while ip < len(program):
-        assert COUNT_OPS == 8, "E: Exhaustive handling of ops in simulation"
+        assert COUNT_OPS == 9, "E: Exhaustive handling of ops in simulation"
 
         op = program[ip]
 
@@ -120,6 +125,13 @@ def simulate_program(program):
             assert (
                 len(op) >= 2
             ), "E: ELSE does not have a reference to the end of its block. Call crossreference_blocks() on the program before simulating to fix this."
+        elif op[0] == OP_DUP:
+            a = stack.pop()
+
+            stack.append(a)
+            stack.append(a)
+
+            ip += 1
         else:
             assert False, f"E: Unreachable op '{op[0]}' in simulation"
 
@@ -167,7 +179,7 @@ def compile_program(program, out_file):
         for ip in range(len(program)):
             op = program[ip]
 
-            assert COUNT_OPS == 8, "E: Exhaustive handling of ops in compilation"
+            assert COUNT_OPS == 9, "E: Exhaustive handling of ops in compilation"
 
             if op[0] == OP_PUSH:
                 out.write("    ;; -- push %d --\n" % op[1])
@@ -218,6 +230,11 @@ def compile_program(program, out_file):
 
                 out.write("    jmp addr_%d\n" % op[1])
                 out.write("addr_%d:\n" % (ip + 1))
+            elif op[0] == OP_DUP:
+                out.write("    ;; -- dup -- \n")
+                out.write("    pop rax\n")
+                out.write("    push rax\n")
+                out.write("    push rax\n")
             else:
                 assert False, "E: Unreachable op in compilation"
 
@@ -229,7 +246,7 @@ def compile_program(program, out_file):
 def parse_token_as_op(token):
     (file_path, row, col, word) = token
 
-    assert COUNT_OPS == 8, "E: Exhaustive handling of ops in parsing"
+    assert COUNT_OPS == 9, "E: Exhaustive handling of ops in parsing"
 
     if word == "+":
         return plus()
@@ -243,6 +260,8 @@ def parse_token_as_op(token):
         return if_()
     elif word == "end":
         return end()
+    elif word == "dup":
+        return dup()
     else:
         try:
             return push(int(word))
@@ -258,7 +277,7 @@ def crossreference_blocks(program):
         op = program[ip]
 
         assert (
-            COUNT_OPS == 8
+            COUNT_OPS == 9
         ), "E: Exhaustive handling of ops in crossreferencing. No need to handle all ops in here. Only those that form blocks"
 
         if op[0] == OP_IF:
@@ -289,6 +308,9 @@ def find_col(line, start, predicate):
         start += 1
 
     return start
+
+
+# TODO: Lexer doesn't support comments
 
 
 def lex_line(line):
